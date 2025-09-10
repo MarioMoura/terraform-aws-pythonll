@@ -15,14 +15,24 @@ mkdir -p $WORKING_DIR
 cd $WORKING_DIR
 [ -z $PYTHON_VERSION ] && fail "no python version"
 
-PIP_OUT=$(pip install \
-	${PLATFORM:+--platform} $PLATFORM \
-	--target python \
-	${IMPLEMENTATION+--implementation} $IMPLEMENTATION \
-	--python-version $PYTHON_VERSION \
-	--only-binary=:all: \
-	$REQUIREMENTS 2>&1)
-[ $? -gt 0 ] && fail "$PIP_OUT"
+# Create temporary requirements file for Docker
+echo "$REQUIREMENTS" | tr ' ' '\n' > temp_requirements.txt
+
+# Docker-based installation for consistent environment
+docker run --rm \
+	-u "$(id -u):$(id -g)" \
+	-v "$PWD:/work" \
+	-w /work \
+	"python:${PYTHON_VERSION}" \
+	pip install \
+		 -t ./python "$REQUIREMENTS" >/dev/null 2>&1
+
+# Clean up temp file
+#rm -f temp_requirements.txt
+
+# Remove unneeded files
+#find python \( -name '__pycache__' -o -name '*.dist-info' \) -type d -exec rm -rf {} +
+#rm -rf python/bin
 
 SIZE=$(du python -hs | cut -f 1)
 
@@ -33,11 +43,9 @@ jq -n \
 	--arg gitlog "$GIT_LOG" \
 	--arg platform "$PLATFORM" \
 	--arg layersize "$SIZE" \
-	--arg pipout "$PIP_OUT" \
 	--arg input "$VARS" \
 	'{
 		"input":$input,
-		"pip_out":$pipout,
 		"platform":$platform,
 		"gitlog":$gitlog,
 		"layersize": $layersize
