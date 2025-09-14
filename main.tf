@@ -13,25 +13,11 @@ resource "terraform_data" "install_packages" {
     environment = {
       PYTHON_VERSION = var.python_version
       WORKING_DIR    = local.working_dir
-      PLATFORM       = var.platform
       REQUIREMENTS   = local.requirements_str
-      IMPLEMENTATION = var.implementation
     }
   }
 }
 
-# Information collection phase - JSON output for Terraform
-data "external" "layer_info" {
-  program = ["bash", "${path.module}/info.sh"]
-
-  query = {
-    working_dir    = local.working_dir
-    platform       = var.platform
-    implementation = var.implementation
-  }
-
-  depends_on = [terraform_data.install_packages]
-}
 data "archive_file" "layer_zip" {
   source_dir  = local.working_dir
   type        = "zip"
@@ -47,11 +33,11 @@ resource "aws_lambda_layer_version" "lambda_layer" {
   filename   = data.archive_file.layer_zip.output_path
   layer_name = var.layer_name_prefix == null ? var.layer_name : "${var.layer_name_prefix}-${var.layer_name}"
 
-  description = "${data.external.layer_info.result.gitlog}:${data.external.layer_info.result.layersize}"
+  description = "Python ${var.python_version} layer"
 
   skip_destroy = true
 
-  compatible_runtimes = ["python3.11"]
+  compatible_runtimes = ["python3.13"]
   lifecycle {
     replace_triggered_by = [terraform_data.replacement]
   }

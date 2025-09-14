@@ -11,18 +11,8 @@ variable "layer_name_prefix" {
   type        = string
   default     = null
 }
-variable "platform" {
-  description = "pip install platform"
-  type        = string
-  default     = "manylinux2014_x86_64"
-}
 variable "python_version" {
   description = "Python version"
   type        = string
-  default     = "3.11"
-}
-variable "implementation" {
-  description = "pip implementation"
-  type        = string
-  default     = "cp"
+  default     = "3.13"
 }
